@@ -1,35 +1,40 @@
-
 .container {
-  display: flex;
-  justify-content: center;
-  .main {
-    background: url("../images/bg1.png");
-    /* 
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background-color: #a7f1a1;
+
+	.main {
+		background: url("../../assets/images/bg1.png");
+		/* 
 		两者都是等比例放大
 		cover必定填满容器，超出部分裁剪
 		contain会让一边贴边之后就停止,剩下的填不满则白边
 		*/
-    background-size: cover;
-    width: 100vw;
+		background-size: cover;
+		width: 100vw;
 		/* calc的除法右边必须没有单位,乘法任意一边有的单位即可,加减两边都必须有单位 */
-    height: calc(((502vw * 100) / 410));
+		height: calc(502vw * (100 / 410));
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		flex-direction: column;
-    .unlimit {
-      background: url("../images/unlimit.png");
+
+		.unlimit {
+			background: url("../../assets/images/unlimit.png");
 			background-size: cover;
 			width: 60vw;
-			height: calc((60vw * 81) / 246);
+			height: calc(60vw * (81 / 246));
 			margin-top: 8vmax;
-    }
-    .limit {
-      background: url("../images/limit.png");
+		}
+
+		.limit {
+			background: url("../../assets/images/limit.png");
 			background-size: cover;
 			width: 60vw;
 			height: calc(60vw * (81 / 246));
 			margin-top: 2vmax;
-    }
-  }
+		}
+	}
 }
