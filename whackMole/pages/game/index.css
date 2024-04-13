@@ -5,11 +5,32 @@
 	justify-content: center;
 	align-items: center;
 	background-color: #a7f1a1;
+	overflow-x: hidden;
 	.main {
 		background: url('../../assets/images/bg2.png');
 		background-size: cover;
 		width: 100vw;
 		/* calc的除法右边必须没有单位,乘法任意一边有的单位即可,加减两边都必须有单位 */
 		height: calc(502vw * (100 / 410));
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: column;
+		.title {
+			text-align: center;
+			line-height: 10vh;
+			flex: 2;
+			color: #0a647a
+		}
+		.board {
+			display: flex;
+			justify-content: space-around;
+			flex: 2;
+		}
+		.whack-area {
+			display: flex;
+			flex-wrap: wrap;
+			flex: 8;
+		}
 	}
 }
