@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesium React 测试</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        #root {
+            width: 100%;
+            height: 100%;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <h3>正在加载Cesium...</h3>
+        <p>请稍候...</p>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module">
+        import React from 'https://esm.sh/react@18.2.0';
+        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+        import * as Cesium from 'https://esm.sh/cesium@1.100.0';
+        import 'https://esm.sh/cesium@1.100.0/Build/Cesium/Widgets/widgets.css?css';
+
+        // 你的Cesium token
+        const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZDRlNzU3YS03YWQzLTQ4YjQtYTI5NS1lODU4MDk0NzRhMDgiLCJpZCI6MzQ1NTA2LCJpYXQiOjE3NTkxMzE1Njh9.a29pwlaeo1Lf_a3pL7Zw721RBlHl_kCZWrI8GoxYKO8';
+
+        const CesiumViewer = () => {
+            const cesiumContainerRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!cesiumContainerRef.current) return;
+
+                try {
+                    // 设置Cesium token
+                    Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+
+                    // 创建Viewer实例
+                    const viewer = new Cesium.Viewer(cesiumContainerRef.current, {
+                        // 简化配置避免WebGL问题
+                        baseLayerPicker: false,
+                        geocoder: false,
+                        homeButton: false,
+                        sceneModePicker: false,
+                        navigationHelpButton: false,
+                        animation: false,
+                        timeline: false,
+                        fullscreenButton: false,
+                        vrButton: false,
+                        // 使用简单的影像提供者
+                        imageryProvider: new Cesium.ArcGisMapServerImageryProvider({
+                            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+                        })
+                    });
+
+                    // 设置初始视角到北京天安门
+                    viewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(116.3974, 39.9093, 2000.0),
+                        orientation: {
+                            heading: 0.0,
+                            pitch: -0.5,
+                            roll: 0.0
+                        }
+                    });
+
+                    // 添加一个简单的红色点标记
+                    viewer.entities.add({
+                        position: Cesium.Cartesian3.fromDegrees(116.3974, 39.9093),
+                        point: {
+                            pixelSize: 15,
+                            color: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 2
+                        },
+                        label: {
+                            text: '北京天安门',
+                            font: '14px sans-serif',
+                            fillColor: Cesium.Color.WHITE,
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 2,
+                            pixelOffset: new Cesium.Cartesian2(0, -20)
+                        }
+                    });
+
+                    console.log('✅ Cesium Viewer 初始化成功');
+
+                    // 隐藏加载提示
+                    document.getElementById('loading').style.display = 'none';
+
+                    // 清理函数
+                    return () => {
+                        viewer.destroy();
+                    };
+                } catch (error) {
+                    console.error('❌ Cesium初始化失败:', error);
+                    document.getElementById('loading').innerHTML = `
+                        <h3>❌ Cesium初始化失败</h3>
+                        <p>${error.message}</p>
+                        <button onclick="location.reload()">刷新页面</button>
+                    `;
+                }
+            }, []);
+
+            return React.createElement('div', {
+                ref: cesiumContainerRef,
+                style: {
+                    width: '100%',
+                    height: '100%'
+                }
+            });
+        };
+
+        const App = () => {
+            return React.createElement('div', {
+                style: {
+                    width: '100vw',
+                    height: '100vh',
+                    position: 'relative'
+                }
+            },
+                React.createElement(CesiumViewer)
+            );
+        };
+
+        // 渲染应用
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
