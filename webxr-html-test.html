@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR Html 可见性测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 测试说明面板 */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-panel h3 {
+            margin-bottom: 15px;
+            color: #ff6b35;
+        }
+
+        .info-panel p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .info-panel button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        .info-panel button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .info-panel button.danger {
+            background: #f44336;
+        }
+
+        /* Html 测试面板 */
+        .html-test-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 400px;
+            border: 3px solid #ff6b35;
+            transition: all 0.3s ease;
+        }
+
+        .html-test-panel h2 {
+            color: #ff6b35;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .status-indicator {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .status-indicator.vr-mode {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .status-indicator.normal-mode {
+            background: #e8f5e8;
+            color: #388e3c;
+        }
+
+        .test-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .test-button {
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        .test-button:hover {
+            background: #45a049;
+        }
+
+        .info-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .color-circles {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .color-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .color-circle.orange {
+            background: #ff6b35;
+        }
+
+        .color-circle.blue {
+            background: #2196F3;
+        }
+
+        .tips {
+            font-size: 14px;
+            color: #999;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        /* 3D 场景容器 */
+        .scene-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* 设备信息 */
+        .device-info {
+            background: rgba(255, 107, 53, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff6b35;
+        }
+
+        .device-info strong {
+            color: #ff6b35;
+        }
+
+        /* 日志输出 */
+        .log-output {
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-entry.error {
+            color: #ff4444;
+        }
+
+        .log-entry.warning {
+            color: #ffaa00;
+        }
+
+        .log-entry.info {
+            color: #00aaff;
+        }
+    </style>
+</head>
+<body>
+    <!-- 测试说明面板 -->
+    <div class="info-panel">
+        <h3>🧪 WebXR Html 可见性测试</h3>
+
+        <div class="device-info">
+            <strong>设备信息:</strong> <span id="deviceInfo">检测中...</span>
+        </div>
+
+        <div>
+            <strong>WebXR 支持:</strong> <span id="webxrSupport">检测中...</span>
+        </div>
+
+        <div>
+            <strong>会话状态:</strong> <span id="sessionStatus">未启动</span>
+        </div>
+
+        <p><strong>测试说明:</strong></p>
+        <ul>
+            <li>PC 浏览器: Html 元素应该始终可见</li>
+            <li>VR 设备: 进入 WebXR 模式后 Html 元素应该消失</li>
+        </ul>
+
+        <button id="startVRBtn" onclick="startVRSession()">
+            🥽 进入 VR 模式
+        </button>
+
+        <button id="toggleHtmlBtn" onclick="toggleHtmlVisibility()">
+            切换 Html 可见性
+        </button>
+
+        <button id="testWebXRBtn" onclick="testWebXRSupport()" class="danger">
+            重新检测 WebXR
+        </button>
+
+        <!-- 日志输出 -->
+        <div class="log-output" id="logOutput">
+            <div class="log-entry info">🚀 WebXR Html 测试已启动</div>
+        </div>
+    </div>
+
+    <!-- 3D 场景容器 -->
+    <div class="scene-container">
+        <canvas id="webglCanvas"></canvas>
+    </div>
+
+    <!-- Html 测试面板 -->
+    <div id="htmlTestPanel" class="html-test-panel">
+        <h2>🎯 Html 测试面板</h2>
+
+        <div id="statusIndicator" class="status-indicator normal-mode">
+            <p>🖥️ 普通模式 - Html 元素应该可见</p>
+        </div>
+
+        <div class="test-controls">
+            <div class="info-box">
+                <p>这是一个纯 Html 元素，用于验证 WebXR 模式下的可见性</p>
+            </div>
+
+            <button class="test-button" onclick="showAlert()">
+                🔔 点击测试按钮
+            </button>
+
+            <button class="test-button" onclick="changeColor()">
+                🎨 改变背景色
+            </button>
+        </div>
+
+        <div class="color-circles">
+            <div class="color-circle orange">A</div>
+            <div class="color-circle blue">B</div>
+        </div>
+
+        <div class="info-box">
+            <p><strong>预期行为:</strong></p>
+            <p>• PC 浏览器: 此面板始终可见</p>
+            <p>• VR 设备: 进入 WebXR 模式后消失</p>
+        </div>
+
+        <p class="tips">
+            💡 提示: 如果进入 VR 模式后仍然看到这个面板，说明设备支持 DOM 叠加
+        </p>
+    </div>
+
+    <script>
+        // 全局变量
+        let xrSession = null;
+        let xrRefSpace = null;
+        let animationFrameId = null;
+        let scene3D = null;
+
+        // 日志函数
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        // 初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            log('🚀 页面加载完成，开始初始化...');
+            detectDevice();
+            checkWebXRSupport();
+            init3DScene();
+        });
+
+        // 检测设备信息
+        function detectDevice() {
+            const ua = navigator.userAgent;
+            let deviceInfo = '未知设备';
+
+            if (ua.includes('Pico')) {
+                deviceInfo = 'Pico VR 设备';
+            } else if (ua.includes('Oculus') || ua.includes('Meta')) {
+                deviceInfo = 'Meta Quest 设备';
+            } else if (ua.includes('Windows')) {
+                deviceInfo = 'PC 浏览器';
+            } else if (ua.includes('Android')) {
+                deviceInfo = 'Android 设备';
+            } else if (ua.includes('Mac')) {
+                deviceInfo = 'Mac 浏览器';
+            }
+
+            document.getElementById('deviceInfo').textContent = deviceInfo;
+            log(`📱 检测到设备: ${deviceInfo}`);
+
+            return deviceInfo;
+        }
+
+        // 检查 WebXR 支持
+        function checkWebXRSupport() {
+            if (!navigator.xr) {
+                document.getElementById('webxrSupport').textContent = '不支持';
+                document.getElementById('webxrSupport').style.color = '#f44336';
+                log('❌ 浏览器不支持 WebXR', 'error');
+                document.getElementById('startVRBtn').disabled = true;
+                return false;
+            }
+
+            navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+                const supportText = supported ? '支持沉浸式 VR' : '不支持沉浸式 VR';
+                document.getElementById('webxrSupport').textContent = supportText;
+                document.getElementById('webxrSupport').style.color = supported ? '#4CAF50' : '#f44336';
+
+                if (supported) {
+                    log('✅ WebXR 沉浸式 VR 支持已确认');
+                } else {
+                    log('⚠️ 设备不支持沉浸式 VR', 'warning');
+                    document.getElementById('startVRBtn').disabled = true;
+                }
+            }).catch(error => {
+                log(`❌ WebXR 检测失败: ${error.message}`, 'error');
+                document.getElementById('webxrSupport').textContent = '检测失败';
+                document.getElementById('webxrSupport').style.color = '#f44336';
+            });
+
+            return true;
+        }
+
+        // 开始 VR 会话
+        async function startVRSession() {
+            if (!navigator.xr) {
+                alert('您的浏览器不支持 WebXR');
+                return;
+            }
+
+            try {
+                log('🚀 正在启动 WebXR VR 会话...');
+
+                // 检查支持
+                const isSupported = await navigator.xr.isSessionSupported('immersive-vr');
+                if (!isSupported) {
+                    alert('您的设备不支持沉浸式 VR');
+                    log('❌ 设备不支持沉浸式 VR', 'error');
+                    return;
+                }
+
+                // 请求会话
+                xrSession = await navigator.xr.requestSession('immersive-vr', {
+                    requiredFeatures: ['local-floor']
+                });
+
+                log('✅ WebXR VR 会话启动成功！');
+
+                // 更新 UI 状态
+                document.getElementById('sessionStatus').textContent = 'VR 模式已激活';
+                document.getElementById('sessionStatus').style.color = '#4CAF50';
+                document.getElementById('startVRBtn').disabled = true;
+                document.getElementById('startVRBtn').textContent = 'VR 模式已激活';
+
+                // 更新状态指示器
+                const statusIndicator = document.getElementById('statusIndicator');
+                statusIndicator.className = 'status-indicator vr-mode';
+                statusIndicator.innerHTML = '<p>🥽 VR 模式 - 检查此面板是否可见</p>';
+
+                // 设置会话结束监听
+                xrSession.addEventListener('end', () => {
+                    log('👋 WebXR 会话已结束');
+                    document.getElementById('sessionStatus').textContent = '已结束';
+                    document.getElementById('sessionStatus').style.color = '#f44336';
+                    document.getElementById('startVRBtn').disabled = false;
+                    document.getElementById('startVRBtn').textContent = '🥽 进入 VR 模式';
+
+                    // 恢复状态指示器
+                    const statusIndicator = document.getElementById('statusIndicator');
+                    statusIndicator.className = 'status-indicator normal-mode';
+                    statusIndicator.innerHTML = '<p>🖥️ 普通模式 - Html 元素应该可见</p>';
+
+                    xrSession = null;
+
+                    // 停止 VR 渲染循环
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                });
+
+                // 设置参考空间
+                xrRefSpace = await xrSession.requestReferenceSpace('local-floor');
+
+                // 开始渲染循环
+                startVRRenderLoop();
+
+                // 重要：观察 Html 元素行为
+                log('🔍 现在观察 Html 面板是否消失...');
+                log('💡 在 PC 浏览器中：Html 应该仍然可见');
+                log('💡 在 VR 设备中：Html 应该消失');
+
+            } catch (error) {
+                log(`❌ WebXR 启动失败: ${error.message}`, 'error');
+                alert(`WebXR 启动失败: ${error.message}`);
+            }
+        }
+
+        // 开始 VR 渲染循环
+        function startVRRenderLoop() {
+            if (!xrSession) return;
+
+            function onXRFrame(time, frame) {
+                if (!xrSession) return;
+
+                animationFrameId = xrSession.requestAnimationFrame(onXRFrame);
+
+                // 获取姿态信息
+                const pose = frame.getViewerPose(xrRefSpace);
+                if (pose) {
+                    // 这里可以添加 3D 渲染逻辑
+                    // 现在重点观察 Html 元素的行为
+                }
+            }
+
+            animationFrameId = xrSession.requestAnimationFrame(onXRFrame);
+            log('🔄 VR 渲染循环已启动');
+        }
+
+        // 切换 Html 可见性
+        function toggleHtmlVisibility() {
+            const panel = document.getElementById('htmlTestPanel');
+            const isVisible = panel.style.display !== 'none';
+
+            panel.style.display = isVisible ? 'none' : 'block';
+            log(`${isVisible ? '隐藏' : '显示'} Html 测试面板`);
+        }
+
+        // 测试 WebXR 支持
+        function testWebXRSupport() {
+            log('🔍 重新检测 WebXR 支持...');
+            checkWebXRSupport();
+        }
+
+        // 显示警告（测试交互）
+        function showAlert() {
+            const deviceInfo = document.getElementById('deviceInfo').textContent;
+            const sessionStatus = document.getElementById('sessionStatus').textContent;
+
+            alert(`设备: ${deviceInfo}\nWebXR 状态: ${sessionStatus}\n\n这个警告框也是 Html 元素！`);
+            log('🔔 显示了 Html 警告框');
+        }
+
+        // 改变背景色（测试交互）
+        function changeColor() {
+            const panel = document.getElementById('htmlTestPanel');
+            const colors = [
+                'linear-gradient(135deg, #ff6b35, #f7941d)',
+                'linear-gradient(135deg, #2196F3, #21CBF3)',
+                'linear-gradient(135deg, #9C27B0, #E91E63)',
+                'linear-gradient(135deg, #4CAF50, #8BC34A)'
+            ];
+
+            const currentColor = panel.style.background;
+            let newColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // 确保新颜色与当前颜色不同
+            while (newColor === currentColor) {
+                newColor = colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            panel.style.background = newColor;
+            log('🎨 改变了 Html 面板背景色');
+        }
+
+        // 初始化 3D 场景
+        function init3DScene() {
+            const canvas = document.getElementById('webglCanvas');
+            if (!canvas) return;
+
+            try {
+                // 获取 WebGL 上下文
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) {
+                    log('❌ 无法获取 WebGL 上下文', 'error');
+                    return;
+                }
+
+                // 设置画布大小
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                // 设置视口
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                // 设置清除颜色（透明）
+                gl.clearColor(0.0, 0.0, 0.0, 0.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                // 简单的顶点着色器
+                const vertexShaderSource = `
+                    attribute vec2 a_position;
+                    void main() {
+                        gl_Position = vec4(a_position, 0.0, 1.0);
+                    }
+                `;
+
+                // 简单的片段着色器
+                const fragmentShaderSource = `
+                    precision mediump float;
+                    uniform float u_time;
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / vec2(${canvas.width.toFixed(1)}, ${canvas.height.toFixed(1)});
+                        float color = sin(u_time + uv.x * 10.0) * 0.5 + 0.5;
+                        gl_FragColor = vec4(color * 0.2, color * 0.8, color, 0.8);
+                    }
+                `;
+
+                // 创建着色器
+                function createShader(gl, type, source) {
+                    const shader = gl.createShader(type);
+                    gl.shaderSource(shader, source);
+                    gl.compileShader(shader);
+
+                    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                        log(`❌ 着色器编译失败: ${gl.getShaderInfoLog(shader)}`, 'error');
+                        gl.deleteShader(shader);
+                        return null;
+                    }
+
+                    return shader;
+                }
+
+                const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+                const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+                if (!vertexShader || !fragmentShader) return;
+
+                // 创建程序
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragmentShader);
+                gl.linkProgram(program);
+
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    log(`❌ 程序链接失败: ${gl.getProgramInfoLog(program)}`, 'error');
+                    return;
+                }
+
+                // 创建缓冲区
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+                // 定义三角形顶点
+                const positions = [
+                    -0.5, -0.5,
+                     0.5, -0.5,
+                     0.0,  0.5
+                ];
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+                // 获取属性和统一变量位置
+                const positionLocation = gl.getAttribLocation(program, 'a_position');
+                const timeLocation = gl.getUniformLocation(program, 'u_time');
+
+                // 渲染循环
+                function render(time) {
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+
+                    gl.useProgram(program);
+
+                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                    gl.enableVertexAttribArray(positionLocation);
+                    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+                    gl.uniform1f(timeLocation, time * 0.001);
+
+                    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+                    requestAnimationFrame(render);
+                }
+
+                requestAnimationFrame(render);
+                log('🎮 3D 场景初始化完成');
+
+                // 窗口大小调整
+                window.addEventListener('resize', () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                });
+
+            } catch (error) {
+                log(`❌ 3D 场景初始化失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 清理函数
+        window.addEventListener('beforeunload', () => {
+            if (xrSession) {
+                xrSession.end().catch(() => {});
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+    </script>
+</body>
+</html>
